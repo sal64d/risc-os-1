@@ -1,38 +1,75 @@
-# Build
-CC=riscv64-elf-gcc
-CFLAGS=-ffreestanding -nostartfiles -nostdlib -nodefaultlibs
-CFLAGS+=-g -Wl,--gc-sections -mcmodel=medany
-RUNTIME=src/asm/crt0.s
-LINKER_SCRIPT=src/lds/riscv64-virt.ld
-KERNAL_IMAGE=kernal.elf
+S = ../src
+LDS = $S/kernel.ld
+
+OBJS = \
+	entry.o \
+	start.o \
+	uart.o \
+	syscon.o \
+
+# Tools
+CC = riscv64-elf-gcc
+AS = riscv64-elf-gas
+LD = riscv64-elf-ld
+OBJCOPY = riscv64-elf-objcopy
+OBJDUMP = riscv64-elf-objdump
+
+# CFLAGS  = -Wall -Werror
+# CFLAGS += -O
+CFLAGS += -fno-omit-frame-pointer
+CFLAGS += -fno-stack-protector
+CFLAGS += -fno-common
+CFLAGS += -ffreestanding
+CFLAGS += -nostartfiles
+CFLAGS += -nostdlib
+CFLAGS += -nodefaultlibs
+CFLAGS += -mno-relax
+CFLAGS += -g -Wl,--gc-sections
+CFLAGS += -ggdb -gdwarf-2
+CFLAGS += -MD
+CFLAGS += -mcmodel=medany
+CFLAGS += -march=rv64g
+# CFLAGS += -nostdinc
+
+LDFLAGS = -z max-page-size=4096
 
 # QEMU
-QEMU=qemu-system-riscv64
-MACHINE=virt
-MEM=128M
-RUN=$(QEMU) -nographic -machine $(MACHINE) -m $(MEM)
-RUN+=-bios none -kernel "build/$(KERNAL_IMAGE)"
+QEMU = qemu-system-riscv64
+MACHINE = virt
+MEM = 128M
+CPUS = 3
+QEMUOPTS  = -machine $(MACHINE)
+QEMUOPTS += -m $(MEM)
+QEMUOPTS += -bios none
+QEMUOPTS += -kernel kernel
+#QEMUOPTS += -smp $(CPUS)
+QEMUOPTS += -nographic
+QEMUOPTS += -global virtio-mmio.force-legacy=false
+#QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
+#QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 # QEMU Debug
 GDB_PORT=1234
 
-all: uart syscon common kmain
-	$(CC) build/*.o $(RUNTIME) $(CFLAGS) -T $(LINKER_SCRIPT) -o build/$(KERNAL_IMAGE)
-uart:
-	$(CC) -c src/uart/uart.c $(CFLAGS) -o build/uart.o
-syscon:
-	$(CC) -c src/syscon/syscon.c $(CFLAGS) -o build/syscon.o
-common:
-	$(CC) -c src/common/common.c $(CFLAGS) -o build/common.o
-kmain:
-	$(CC) -c src/kmain.c $(CFLAGS) -o build/kmain.o
+kernel: $(OBJS) $(LDS)
+	$(LD) $(OBJS) $(LDFLAGS) -T $(LDS) -o kernel
+	$(OBJDUMP) -S kernel > kernel.asm
+	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
-run: all
-	$(RUN)
+%.o : $S/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-debug: all
-	$(RUN) -gdb tcp::$(GDB_PORT) -S
+%.o : $S/%.S
+	$(CC) $(CFLAGS) -c $< -o $@
+
+qemu: kernel
+		$(QEMU) $(QEMUOPTS)
+
+qemu-gdb: kernel
+	$(QEMU) $(QEMUOPTS) -gdb tcp::$(GDB_PORT) -S
 
 clean:
-	rm -vf build/*.o
-	rm -vf build/$(KERNAL_IMAGE)
+	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.o *.d \
+	*/*.o */*.d */*.asm */*.sym \
+	kernel .gdbinit
+
