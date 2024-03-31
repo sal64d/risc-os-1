@@ -2,10 +2,10 @@ S = ../src
 LDS = $S/kernel.ld
 
 OBJS = \
-	entry.o \
-	start.o \
-	uart.o \
-	syscon.o \
+		entry.o \
+		start.o \
+		uart.o \
+		syscon.o \
 
 # Tools
 CC = riscv64-elf-gcc
@@ -52,24 +52,24 @@ QEMUOPTS += -global virtio-mmio.force-legacy=false
 GDB_PORT=1234
 
 kernel: $(OBJS) $(LDS)
-	$(LD) $(OBJS) $(LDFLAGS) -T $(LDS) -o kernel
-	$(OBJDUMP) -S kernel > kernel.asm
-	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
+		$(LD) $(OBJS) $(LDFLAGS) -T $(LDS) -o kernel
+		$(OBJDUMP) -S kernel > kernel.asm
+		$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
 %.o : $S/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+		$(CC) $(CFLAGS) -c $< -o $@
 
 %.o : $S/%.S
-	$(CC) $(CFLAGS) -c $< -o $@
+		$(CC) $(CFLAGS) -c $< -o $@
 
 qemu: kernel
 		$(QEMU) $(QEMUOPTS)
 
-qemu-gdb: kernel
-	$(QEMU) $(QEMUOPTS) -gdb tcp::$(GDB_PORT) -S
+qemu-gdb: kernel .gdbinit
+		$(QEMU) $(QEMUOPTS) -gdb tcp::$(GDB_PORT) -S
 
 clean:
-	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.o *.d \
-	*/*.o */*.d */*.asm */*.sym \
-	kernel .gdbinit
+		rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.o *.d \
+		*/*.o */*.d */*.asm */*.sym \
+		kernel
 

@@ -40,3 +40,45 @@ void uartputs_sync(const char *str) {
   }
   uartputc_sync((int)'\n');
 }
+
+char uartgetc_sync() {
+  // Wait until user enters some value
+  while ((ReadReg(LSR) & LSR_RX_READY) == 0)
+    ;
+
+  return ReadReg(RHR);
+}
+
+int pow(int x, int y) {
+  int i = 0;
+  int res = 1;
+  while (i++ < y) {
+    res *= x;
+  };
+
+  return res;
+}
+
+void itos(int value, char *result) {
+  int power = 0;
+  char num[64];
+  int currentValue = 0;
+
+  while (1) {
+    int digit = ((value / pow(10, power)) % 10);
+    num[power] = digit;
+    currentValue += digit * pow(10, power);
+    power++;
+
+    if (currentValue < value)
+      continue;
+    break;
+  }
+
+  int i = 0;
+  while (i < power) {
+    result[i] = num[power - i - 1] + ((int)'0');
+    i++;
+  }
+  result[i] = '\0';
+}

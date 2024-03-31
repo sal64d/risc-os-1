@@ -7,7 +7,7 @@
 // https://www.lammertbies.nl/comm/info/serial-uart
 
 #define UART0 0x10000000L
-#define Reg(reg) ((volatile unsigned char*)(UART0 + reg))
+#define Reg(reg) ((volatile unsigned char *)(UART0 + reg))
 #define ReadReg(reg) (*(Reg(reg)))
 #define WriteReg(reg, v) (*(Reg(reg)) = (v))
 
@@ -41,9 +41,10 @@
 #define LSR_TX_IDLE (1 << 5)
 
 void uart_init();
-void uartputc_sync(int);
-int uargetc_sync();
 
+void uartputc_sync(int);
+char uartgetc_sync();
 void uartputs_sync(const char *);
+void itos(int, char *);
 
 #endif /* ifndef UART_H */
