@@ -4,10 +4,8 @@
 __attribute__((aligned(16))) char stack0[4096];
 
 void kmain(void) {
+  uart_init();
 
-  uart_init(UART_ADDR);
-
-  kputs("Hello world\0");
+  uartputs_sync("This is awsome\0");
   poweroff();
-
 }

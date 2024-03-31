@@ -3,12 +3,12 @@
 #include "uart.h"
 
 void poweroff(void) {
-  kputs("Poweroff requested");
+  uartputs_sync("Poweroff requested");
   *(uint32_t *)SYSCON_ADDR = 0X5555;
 }
 
 void reboot(void) {
-  kputs("Reboot requested");
+  uartputs_sync("Reboot requested");
   *(uint32_t *)SYSCON_ADDR = 0x7777;
 }
 

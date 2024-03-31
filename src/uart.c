@@ -1,51 +1,42 @@
-#include <stdint.h>
+#include "uart.h"
+#include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <limits.h>
-#include "uart.h"
-#define to_hex_digit(n) ('0' + (n) + ((n) < 10 ? 0 : 'a' - '0' - 10))
+#include <stdint.h>
 
-void uart_init(size_t base_addr) {
-  volatile uint8_t *ptr = (uint8_t *)base_addr;
+void uart_init() {
+  // disable interrupts
+  WriteReg(IER, 0);
 
-  // set word len to 8
-  const uint8_t LCR = 0b11;
-  ptr[3] = LCR;
+  // set the baud latch on
+  WriteReg(LCR, LCR_BAUD_LATCH);
+  // set lsb for baud rate
+  WriteReg(DLL, 0x03);
+  // set msb for baud rate
+  WriteReg(DLM, 0x00);
 
-  // enable fifo
-  ptr[2] = 0b1;
+  // close baud latch and set 8 bit mode
+  WriteReg(LCR, LCR_EIGHT_BITS);
 
-  // enable recv buf interrupts
-  ptr[1] = 0b1;
+  // Clear FIFO and enable it
+  WriteReg(FCR, FCR_FIFO_ENABLE | FCR_FIFO_CLEAR);
+
+  // enable receive and transmit interrupts
+  WriteReg(IER, IER_RX_ENABLE | IER_TX_ENABLE);
 }
 
-static void uart_put(size_t base_addr, uint8_t c) {
-  *(uint8_t *)base_addr = c;
+void uartputc_sync(int character) {
+  // Wait for transmission hold to be empty
+  while ((ReadReg(LSR) & LSR_TX_IDLE) == 0)
+    ;
+  // transmit
+  WriteReg(THR, character);
 }
 
-int kputchar(int character) {
-  uart_put(UART_ADDR, (uint8_t)character);
-  return character;
-}
-
-static void kprint(const char *str) {
+void uartputs_sync(const char *str) {
   while (*str) {
-    kputchar((int)*str);
+    uartputc_sync((int)*str);
     ++str;
   }
+  uartputc_sync((int)'\n');
 }
-
-int kputs(const char *str) {
-  kprint(str);
-  kputchar((int)'\n');
-  return 0;
-}
-
-void kvprintf(const char *fmt, va_list args){
-  return;
-}
-
-void kprintf(const char *fmt, ...){
-  return;
-}
-
